@@ -10,6 +10,11 @@ let s:TYPE = {
       \   'funcref': type(function('call'))
       \ }
 
+function! plugpac#setup(opts)
+  let s:update_opts = get(a:opts, 'update', {'do': 'call minpac#status()'})
+  let s:minpac_begin_opts = get(a:opts, 'begin', {})
+endfunction
+
 function! plugpac#begin()
   let s:lazy = { 'ft': {}, 'map': {}, 'cmd': {} }
   let s:repos = {}
@@ -137,16 +142,20 @@ function! s:setup_command()
   command! -bar -nargs=+ Pack call plugpac#add(<args>)
 
   command! -bar PackInstall call s:init_minpac() | call minpac#update(keys(filter(copy(minpac#pluglist), {-> !isdirectory(v:val.dir . '/.git')})))
-  command! -bar PackUpdate  call s:init_minpac() | call minpac#update('', {'do': 'call minpac#status()'})
+  command! -bar PackUpdate  call s:init_minpac() | call s:update_with_callback({'do': 'call minpac#status()'})
   command! -bar PackClean   call s:init_minpac() | call minpac#clean()
   command! -bar PackStatus  call s:init_minpac() | call minpac#status()
   command! -bar -nargs=1 -complete=customlist,s:plugin_dir_complete PackDisable call s:disable_plugin(<q-args>)
 endfunction
 
+function! s:update_with_callback(default)
+  call minpac#update('', get(s:, 'update_opts', a:default))
+endfunction
+
 function! s:init_minpac()
   packadd minpac
 
-  call minpac#init()
+  call minpac#init(get(s:, 'minpac_begin_opts', {}))
   for [repo, opts] in items(s:repos)
     call minpac#add(repo, opts)
   endfor
